@@ -3,47 +3,70 @@
 const { ServiceBroker } = require("moleculer");
 const { Mails } = require("../index");
 const { AclMixin } = require("imicros-acl");
+const { SecretsMixin } = require("imicros-minio");
+const { v4: uuid } = require("uuid");
 const nodemailer = require("nodemailer");
 const fs = require("fs");
+const util = require("util");
 
 const timestamp = Date.now();
 
-// mock imicros-store mixin
-const Store = (options) => { return {
+const globalStore ={};
+
+// mock imicros-minio mixin
+const Store = (/*options*/) => { return {
     methods: {
-        async set ({ ctx = null, key = null, value = null } = {}) {
-            if ( !ctx || !key ) return false;
+        async putString ({ ctx = null, objectName = null, value = null } = {}) {
+            if ( !ctx || !objectName ) return false;
             
-            let internal = Buffer.from(ctx.meta.acl.ownerIdr + "~" + key).toString("base64");
+            let internal = Buffer.from(ctx.meta.acl.ownerId + "~" + objectName).toString("base64");
             
             this.store[internal] = value;
             return true;
         },
-        async get ({ ctx = null, key }) {
-            if ( !ctx || !key ) throw new Error("missing parameter");
+        async getString ({ ctx = null, objectName }) {
+            if ( !ctx || !objectName ) throw new Error("missing parameter");
 
-            let internal = Buffer.from(ctx.meta.acl.ownerIdr + "~" + key).toString("base64");
+            let internal = Buffer.from(ctx.meta.acl.ownerId + "~" + objectName).toString("base64");
             
             return this.store[internal];            
-        },   
-        async del ({ ctx = null, key }) {
-            if ( !ctx || !key ) throw new Error("missing parameter");
-            
-            let internal = Buffer.from(ctx.meta.acl.ownerIdr + "~" + key).toString("base64");
-            
-            delete this.store[internal];
-            
-            return true;            
         }   
     },
     created () {
-        this.store = options.store;
+        this.store = globalStore;
     }
 };};
 
+
+// mock keys service
+const Keys = {
+    name: "keys",
+    actions: {
+        getOek: {
+            handler(ctx) {
+                if (!ctx.params || !ctx.params.service) throw new Error("Missing service name");
+                if ( ctx.params.id == "prev" ) {
+                    return {
+                        id: this.prev,
+                        key: "myPreviousSecret"
+                    };    
+                }
+                return {
+                    id: this.current,
+                    key: "mySecret"
+                };
+            }
+        }
+    },
+    created() {
+        this.prev = uuid();
+        this.current = uuid();
+    } 
+};
+
 describe("Test mails service", () => {
 
-    let broker, service, account;
+    let broker, service, account, keyService;
     beforeAll(async () => {
         account = await nodemailer.createTestAccount();
     });
@@ -55,14 +78,25 @@ describe("Test mails service", () => {
 
         it("it should start the broker", async () => {
             broker = new ServiceBroker({
-                logger: console,
-                logLevel: "debug" // "info" //"debug"
+                logger: {
+                    type: "Pino",
+                    options: {
+                        level: "debug",
+						pino: {
+							options: null
+						}
+                    }
+                } //,
+                // logLevel: "debug" // "info" //"debug"
             });
+            keyService = await broker.createService(Keys);
             service = await broker.createService(Mails, Object.assign({ 
                 name: "mails",
-                mixins: [Store({ store: {} }), AclMixin]
+                mixins: [Store(), AclMixin, SecretsMixin({ service: "keys" })],
+                dependencies: ["keys"]
             }));
             await broker.start();
+            expect(keyService).toBeDefined();
             expect(service).toBeDefined();
         });
 
@@ -82,8 +116,8 @@ describe("Test mails service", () => {
                     }, 
                     user: { 
                         id: `1-${timestamp}` , 
-                        email: `1-${timestamp}@host.com` }, 
-                    access: [`1-${timestamp}`, `2-${timestamp}`] 
+                        email: `1-${timestamp}@host.com`
+                    }
                 } 
             };
         });        
@@ -99,7 +133,11 @@ describe("Test mails service", () => {
                     },
                     auth: {
                         user: account.user,
-                        pass: account.pass
+                        pass: {
+                            _encrypt: {
+                                value: account.pass
+                            }
+                        }
                     }
                 }
             };
@@ -202,7 +240,11 @@ describe("Test mails service", () => {
                     },
                     auth: {
                         user: account.user,
-                        pass: account.pass
+                        pass: {
+                            _encrypt: {
+                                value: account.pass
+                            }
+                        }
                     }
                 }
             };
