@@ -31,7 +31,7 @@
   ],
   "devDependencies": {
     "coveralls": "^3.0.11",
-    "imicros-acl": "^0.0.4",
+    "imicros-acl": "^0.0.6",
     "imicros-minio": "0.0.7",
     "jest": "^25.5.4",
     "moleculer": "^0.14.11",
