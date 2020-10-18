@@ -81,10 +81,10 @@ describe("Test mails service", () => {
                 logger: {
                     type: "Pino",
                     options: {
-                        level: "debug",
-						pino: {
-							options: null
-						}
+                        level: "error",
+                        pino: {
+                            options: null
+                        }
                     }
                 } //,
                 // logLevel: "debug" // "info" //"debug"
@@ -151,6 +151,27 @@ describe("Test mails service", () => {
         it("it should verify the account", async () => {
             let params = {
                 account: "test"
+            };
+            return broker.call("mails.verify", params, opts).then(res => {
+                expect(res).toBeDefined();
+                expect(res).toEqual(true);
+            });
+                
+        });
+
+        it("it should verify the account object", async () => {
+            let params = {
+                account: {
+                    smtp: {
+                        host: account.smtp.host,
+                        port: account.smtp.port,
+                        secure: account.smtp.secure
+                    },
+                    auth: {
+                        user: account.user,
+                        pass: account.pass
+                    }
+                }
             };
             return broker.call("mails.verify", params, opts).then(res => {
                 expect(res).toBeDefined();
