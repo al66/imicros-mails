@@ -69,6 +69,7 @@ describe("Test mails service", () => {
     let broker, service, account, keyService;
     beforeAll(async () => {
         account = await nodemailer.createTestAccount();
+        console.log(account);
     });
     
     afterAll(() => {
@@ -154,7 +155,32 @@ describe("Test mails service", () => {
             };
             return broker.call("mails.verify", params, opts).then(res => {
                 expect(res).toBeDefined();
-                expect(res).toEqual(true);
+                expect(res.test).toEqual(true);
+                expect(res.err).toEqual(null);
+            });
+                
+        });
+
+        it("it should reject verification of the account", async () => {
+            let params = {
+                account: {
+                    smtp: {
+                        host: account.smtp.host,
+                        port: account.smtp.port,
+                        secure: account.smtp.secure
+                    },
+                    auth: {
+                        user: account.user,
+                        pass: "wrong pass"
+                    }
+                }
+            };
+            return broker.call("mails.verify", params, opts).then(res => {
+                expect(res).toBeDefined();
+                expect(res.test).toEqual(false);
+                expect(res.err).toBeDefined();
+                // console.log(res.err);
+                // console.log(res.err.message);
             });
                 
         });
@@ -175,7 +201,8 @@ describe("Test mails service", () => {
             };
             return broker.call("mails.verify", params, opts).then(res => {
                 expect(res).toBeDefined();
-                expect(res).toEqual(true);
+                expect(res.test).toEqual(true);
+                expect(res.err).toEqual(null);
             });
                 
         });
@@ -250,45 +277,6 @@ describe("Test mails service", () => {
                 
         });
 
-        it("it should save imap settings", async () => {
-            let params = {
-                account: "test",
-                settings: {
-                    imap: {
-                        host: account.imap.host,
-                        port: account.imap.port,
-                        tls: true
-                    },
-                    auth: {
-                        user: account.user,
-                        pass: {
-                            _encrypt: {
-                                value: account.pass
-                            }
-                        }
-                    }
-                }
-            };
-            return broker.call("mails.imap", params, opts).then(res => {
-                expect(res).toBeDefined();
-                expect(res.account).toBeDefined();
-            });
-                
-        });
-        
-        it("it should fetch sent email via imap", async () => {
-            let params = {
-                account: "test",
-                seq: 1
-            };
-            return broker.call("mails.fetch", params, opts).then(res => {
-                expect(res).toBeDefined();
-                console.log(res);
-            });
-                
-        });
-        
-        
     });
         
     describe("Test stop broker", () => {

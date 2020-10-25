@@ -1,9 +1,9 @@
 {
   "name": "imicros-mails",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "Andreas Leinen <andreas.leinen@imicros.de> (www.imicros.de)",
   "license": "MIT",
-  "description": "Moleculer service for sending mails via smtp and handling imap inboxes",
+  "description": "Moleculer service for sending mails via smtp",
   "main": "index.js",
   "scripts": {
     "test": "jest --coverage --no-cache --silent",
@@ -25,9 +25,7 @@
     "imicros",
     "moleculer",
     "mail",
-    "inbox",
-    "smtp",
-    "imap"
+    "smtp"
   ],
   "devDependencies": {
     "coveralls": "^3.0.11",
@@ -41,7 +39,6 @@
     "uuid": "^7.0.3"
   },
   "dependencies": {
-    "imap": "^0.8.19",
     "lodash": "^4.17.20",
     "nodemailer": "^6.4.14"
   }
